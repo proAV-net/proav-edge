@@ -28,6 +28,9 @@ PASSWORD=""
 PROXY=""
 HTTPS=1
 YES=0
+CLOUD_SECURE=true
+# EDGE_INSTALL_SKIP_PULL=1 starts whatever image is already on the host (for testing the installer itself).
+SKIP_PULL="${EDGE_INSTALL_SKIP_PULL:-0}"
 
 usage() { sed -n '2,15p' "$0"; exit "${1:-0}"; }
 
@@ -41,6 +44,8 @@ while [ $# -gt 0 ]; do
         --password) PASSWORD="$2"; shift ;;
         --proxy) PROXY="$2"; shift ;;
         --no-https) HTTPS=0 ;;
+        # Lab use only: a plain-HTTP cloud (a local docker-compose stack).
+        --cloud-insecure) CLOUD_SECURE=false ;;
         --yes|-y) YES=1 ;;
         -h|--help) usage ;;
         *) echo "Unknown option: $1" >&2; usage 1 ;;
@@ -127,7 +132,7 @@ envset EDGE_NAME "$NAME"
 [ -z "$CLOUD" ] && CLOUD=$(envget EDGE_CLOUD_HOST)
 [ -z "$CLOUD" ] && ask CLOUD "Cloud to connect to (proav.cloud for production, test.proav.cloud for test)" "proav.cloud"
 envset EDGE_CLOUD_HOST "$CLOUD"
-envset EDGE_CLOUD_SECURE "true"
+envset EDGE_CLOUD_SECURE "$CLOUD_SECURE"
 
 [ -z "$API_KEY" ] && API_KEY=$(envget EDGE_CLOUD_API_KEY)
 if [ -z "$API_KEY" ]; then
@@ -161,8 +166,12 @@ envset EDGE_TAG "$VERSION"
 chmod 600 .env
 
 # ---------- 6. Start ----------
-say "Pulling $IMAGE:$VERSION"
-docker compose pull --quiet
+if [ "$SKIP_PULL" = 1 ]; then
+    warn "EDGE_INSTALL_SKIP_PULL is set; not pulling, using the image already on this host"
+else
+    say "Pulling $IMAGE:$VERSION"
+    docker compose pull --quiet
+fi
 say "Starting the edge"
 docker compose up -d
 
