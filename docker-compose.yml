@@ -51,6 +51,10 @@ services:
     image: ghcr.io/proav-net/proav-edge:${EDGE_TAG:-latest}
     container_name: proav-edge-updater
     command: ["--updater"]
+    # Root inside its container: the Docker socket is root:docker (or root:root) on the host and the image's
+    # unprivileged user cannot open it. The updater already has root-equivalent power through that socket, so
+    # this adds nothing; the edge container itself stays unprivileged.
+    user: "0:0"
     restart: unless-stopped
     environment:
       EDGE_ROLE: updater
