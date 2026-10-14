@@ -6,7 +6,7 @@ This repository is the **distribution**: the installer, the compose file, the en
 
 ## Requirements
 
-- A Linux host with Docker Engine and the Compose plugin (a small VM is fine: 2 vCPU, 2 GB RAM, 20 GB disk). The host needs a route to the cloud, directly or through a web proxy, and the processors need a route to the host.
+- A Linux host with Docker Engine and the Compose plugin, x86-64 or ARM64 (a small VM is fine: 2 vCPU, 2 GB RAM, 20 GB disk; so is a Raspberry Pi 4 or an ARM mini-PC). The host needs a route to the cloud, directly or through a web proxy, and the processors need a route to the host.
 - A namespace API key from the portal with the **device register** capability (**Settings → API keys → New key**). The edge uses it once to register itself.
 
 ## Install
