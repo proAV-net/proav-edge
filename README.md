@@ -35,7 +35,7 @@ By hand: copy `docker-compose.yml` and `.env.example` (as `.env`) into a folder,
 
 ## Updating
 
-From the dashboard's **Software** tab: it lists the releases, with their notes, and installs one on request. The updater sidecar pulls the image, verifies its signature (a key signature that works offline, plus proAV's CI identity when Sigstore is reachable), swaps the container, waits for the new edge to be healthy and restores the old one if it is not. **Roll back** is one click. Or from the host:
+From the dashboard's **System** tab: it lists the releases, with their notes, and installs one on request. The updater sidecar pulls the image, verifies its signature (a key signature that works offline, plus proAV's CI identity when Sigstore is reachable), swaps the container, waits for the new edge to be healthy and restores the old one if it is not. **Roll back** is one click. Or from the host:
 
 ```bash
 cd /opt/proav-edge && docker compose pull && docker compose up -d

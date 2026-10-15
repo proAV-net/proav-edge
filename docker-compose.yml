@@ -41,6 +41,10 @@ services:
       # Package cache for deploys (in edge-data): on by default, capped at EDGE_CACHE_MAX_GB.
       EDGE_CACHE: ${EDGE_CACHE:-true}
       EDGE_CACHE_MAX_GB: ${EDGE_CACHE_MAX_GB:-10}
+      # Check-ins held during an uplink outage (in edge-data) and replayed when it returns.
+      EDGE_OUTBOX: ${EDGE_OUTBOX:-true}
+      EDGE_OUTBOX_MAX_MB: ${EDGE_OUTBOX_MAX_MB:-256}
+      EDGE_OUTBOX_MAX_AGE_HOURS: ${EDGE_OUTBOX_MAX_AGE_HOURS:-72}
       # Self-update from the dashboard, through the updater service below.
       EDGE_UPDATES_CHANNEL: ${EDGE_UPDATES_CHANNEL:-next}
       EDGE_UPDATES_VERIFY: ${EDGE_UPDATES_VERIFY:-true}
