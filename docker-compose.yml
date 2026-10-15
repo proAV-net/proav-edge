@@ -1,11 +1,21 @@
 # proAV.Net Edge on a site. The installer (install.sh) writes .env and starts this; by hand: copy .env.example
 # to .env, fill it in, then `docker compose up -d`. Processors point cloudConfig.host at this machine: port 8443
-# over HTTPS with the edge's certificate fingerprint pinned, or port 8080 in plain HTTP.
+# over HTTPS with the edge's certificate fingerprint pinned, or port 8080 in plain HTTP, or set
+# cloudConfig.host to "auto" and let a new processor find the edge by mDNS (see docs: Edge → Discovery).
+#
+# Host networking: both containers use the host's network stack (network_mode: host). Multicast (mDNS, UDP 5353)
+# does not cross Docker's bridge network, so this is what lets processors discover the edge. The trade-offs: the
+# edge listens directly on the host's ports (8080, 8443, 8090 and UDP 5353; change them with the variables below,
+# there is no port remapping) and it sees every host interface. Linux only (Docker Desktop on macOS/Windows needs
+# host networking switched on in its settings). Without discovery you can go back to the bridge network with an
+# override file that sets `network_mode: bridge` and the edge's `ports:` again (and `extra_hosts: !reset []` on the
+# updater); set EDGE_DISCOVERY=false then.
 services:
   edge:
     image: ghcr.io/proav-net/proav-edge:${EDGE_TAG:-latest}
     container_name: proav-edge
     restart: unless-stopped
+    network_mode: host
     environment:
       EDGE_NAME: ${EDGE_NAME:-}
       EDGE_CLOUD_HOST: ${EDGE_CLOUD_HOST:?set EDGE_CLOUD_HOST (e.g. test.proav.cloud)}
@@ -17,15 +27,17 @@ services:
       EDGE_PROXY_USERNAME: ${EDGE_PROXY_USERNAME:-}
       EDGE_PROXY_PASSWORD: ${EDGE_PROXY_PASSWORD:-}
       EDGE_PROXY_BYPASS: ${EDGE_PROXY_BYPASS:-}
-      EDGE_RELAY_HTTP_PORT: 8080
+      EDGE_RELAY_HTTP_PORT: ${EDGE_RELAY_PORT:-8080}
       # HTTPS on by default: without a PFX the edge generates a self-signed certificate (kept in edge-data) that
       # processors pin by fingerprint. Set EDGE_RELAY_HTTPS_PORT=0 to run plain HTTP only.
       EDGE_RELAY_HTTPS_PORT: ${EDGE_RELAY_HTTPS_PORT:-8443}
       EDGE_RELAY_CERT_PATH: ${EDGE_RELAY_CERT_PATH:-}
       EDGE_RELAY_CERT_PASSWORD: ${EDGE_RELAY_CERT_PASSWORD:-}
-      EDGE_ADMIN_PORT: 8090
+      EDGE_ADMIN_PORT: ${EDGE_ADMIN_PORT_PUBLISH:-8090}
       EDGE_ADMIN_USERNAME: ${EDGE_ADMIN_USERNAME:-admin}
       EDGE_ADMIN_PASSWORD: ${EDGE_ADMIN_PASSWORD:?set EDGE_ADMIN_PASSWORD for the dashboard}
+      # Advertise the edge by mDNS (_proav-edge._tcp) so processors with cloudConfig.host "auto" find it.
+      EDGE_DISCOVERY: ${EDGE_DISCOVERY:-true}
       # Self-update from the dashboard, through the updater service below.
       EDGE_UPDATES_CHANNEL: ${EDGE_UPDATES_CHANNEL:-next}
       EDGE_UPDATES_VERIFY: ${EDGE_UPDATES_VERIFY:-true}
@@ -33,10 +45,6 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       HTTP_PROXY: ${HTTP_PROXY:-}
       NO_PROXY: ${NO_PROXY:-}
-    ports:
-      - "${EDGE_RELAY_PORT:-8080}:8080"
-      - "${EDGE_RELAY_HTTPS_PORT_PUBLISH:-8443}:${EDGE_RELAY_HTTPS_PORT:-8443}"
-      - "${EDGE_ADMIN_PORT_PUBLISH:-8090}:8090"
     volumes:
       - edge-data:/data
       - edge-run:/run/proav-edge
@@ -56,6 +64,11 @@ services:
     # this adds nothing; the edge container itself stays unprivileged.
     user: "0:0"
     restart: unless-stopped
+    # On the host network too, so it reaches the edge's health check after a swap: the edge is not on a compose
+    # network any more, so its container name is mapped to the host's loopback, where the edge listens.
+    network_mode: host
+    extra_hosts:
+      - "proav-edge:127.0.0.1"
     environment:
       EDGE_ROLE: updater
       EDGE_UPDATER_TARGET: proav-edge

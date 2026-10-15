@@ -215,5 +215,7 @@ if [ "$HTTPS" = 1 ] && [ -n "$FINGERPRINT" ]; then
     echo "  Processors on a framework older than 2026.10.14 use plain HTTP instead:"
 fi
 echo "    { \"cloudConfig\": { \"host\": \"${FIRST_IP:-<this-host>}:8080\", \"secure\": false } }"
+echo "  New processors on the same network can instead use { \"cloudConfig\": { \"host\": \"auto\" } } and find"
+echo "  this edge by mDNS (approve them on the dashboard)."
 echo
 echo "  Update later from the dashboard's Software tab, or: cd $DIR && docker compose pull && docker compose up -d"

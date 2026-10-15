@@ -30,6 +30,7 @@ By hand: copy `docker-compose.yml` and `.env.example` (as `.env`) into a folder,
 - Dashboard: `http://<host>:8090/edge/`, user `admin`. Overall status, the processors relayed, the cloud connection (and the proxy settings, changeable there), software updates, and the relay certificate.
 - The edge appears in the portal as a device within a minute, on the location's **Edges** tab.
 - Point a processor at the edge by changing its cloud config (the installer and the dashboard's **Processors** tab show the exact block). Over HTTPS the processor pins the edge's self-signed certificate by fingerprint; no certificate authority, no renewal.
+- Or let new processors find it: with `"cloudConfig": { "host": "auto" }` a processor that is not registered yet browses the local network by mDNS, finds the edge (it advertises `_proav-edge._tcp` with its address, ports and certificate fingerprint), saves that into its config and asks to join; approve it on the dashboard. A registered processor never switches on its own. Discovery is why the compose file runs the edge with host networking (multicast does not cross Docker's bridge), so the edge uses the host's ports 8080, 8443, 8090 and UDP 5353 directly; set `EDGE_DISCOVERY=false` to turn the advertisement off.
 
 ## Updating
 
