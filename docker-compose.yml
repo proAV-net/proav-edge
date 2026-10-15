@@ -38,6 +38,9 @@ services:
       EDGE_ADMIN_PASSWORD: ${EDGE_ADMIN_PASSWORD:?set EDGE_ADMIN_PASSWORD for the dashboard}
       # Advertise the edge by mDNS (_proav-edge._tcp) so processors with cloudConfig.host "auto" find it.
       EDGE_DISCOVERY: ${EDGE_DISCOVERY:-true}
+      # Package cache for deploys (in edge-data): on by default, capped at EDGE_CACHE_MAX_GB.
+      EDGE_CACHE: ${EDGE_CACHE:-true}
+      EDGE_CACHE_MAX_GB: ${EDGE_CACHE_MAX_GB:-10}
       # Self-update from the dashboard, through the updater service below.
       EDGE_UPDATES_CHANNEL: ${EDGE_UPDATES_CHANNEL:-next}
       EDGE_UPDATES_VERIFY: ${EDGE_UPDATES_VERIFY:-true}

@@ -134,9 +134,15 @@ envset EDGE_NAME "$NAME"
 envset EDGE_CLOUD_HOST "$CLOUD"
 envset EDGE_CLOUD_SECURE "$CLOUD_SECURE"
 
+# The API key is only needed for the edge's first registration. Once the edge is registered (its device key is in
+# the edge-data volume) and "May enrol processors" is switched on for it in the portal, it enrols processors with
+# its own key and the API key can be removed from .env. So a re-run does not ask again for an edge that is
+# already registered.
+ALREADY_REGISTERED=0
+if curl -fsS -m 2 http://127.0.0.1:8090/healthz 2>/dev/null | grep -Eq '"edge": *"(registered|unreachable)"'; then ALREADY_REGISTERED=1; fi
 [ -z "$API_KEY" ] && API_KEY=$(envget EDGE_CLOUD_API_KEY)
-if [ -z "$API_KEY" ]; then
-    ask API_KEY "Namespace API key with the device-register capability (Portal → Settings → API keys), or blank to add it later" "" secret
+if [ -z "$API_KEY" ] && [ "$ALREADY_REGISTERED" = 0 ]; then
+    ask API_KEY "Namespace API key with the device-register capability (Portal → Settings → API keys). Only needed for the edge's first registration; blank to add it later" "" secret
 fi
 envset EDGE_CLOUD_API_KEY "$API_KEY"
 
@@ -199,10 +205,15 @@ echo "  Dashboard:   http://${FIRST_IP:-<this-host>}:8090/edge/   (user: admin)"
 if [ "${GENERATED_USED:-0}" = 1 ]; then
     echo "  Password:    $PASSWORD   (generated; it is in $DIR/.env)"
 fi
-if [ -z "$API_KEY" ]; then
+if [ "$ALREADY_REGISTERED" = 1 ] && [ -z "$API_KEY" ]; then
+    echo "  Registration: already registered; no API key needed."
+elif [ -z "$API_KEY" ]; then
     echo "  Registration: no API key given. Add EDGE_CLOUD_API_KEY to $DIR/.env and run: docker compose up -d"
 else
     echo "  Registration: the edge registers itself in the portal within a minute as \"$NAME\"."
+    echo "               The API key is only needed for that first registration. Then switch on 'May enrol"
+    echo "               processors' on the edge's page in the portal, remove EDGE_CLOUD_API_KEY from $DIR/.env"
+    echo "               and run: docker compose up -d   (the dashboard's Processors tab says when it is safe)."
 fi
 if [ -n "$PROXY" ]; then
     echo "  Proxy:       $PROXY (change it on the dashboard's Cloud tab if the test fails)"
