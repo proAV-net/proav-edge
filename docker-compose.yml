@@ -5,17 +5,23 @@
 #
 # Host networking: both containers use the host's network stack (network_mode: host). Multicast (mDNS, UDP 5353)
 # does not cross Docker's bridge network, so this is what lets processors discover the edge. The trade-offs: the
-# edge listens directly on the host's ports (8080, 8443, 8090 and UDP 5353; change them with the variables below,
+# edge listens directly on the host's ports (8080, 8443, 8090, the MQTT broker's TCP 1883 and UDP 5353; change them with the variables below,
 # there is no port remapping) and it sees every host interface. Linux only (Docker Desktop on macOS/Windows needs
 # host networking switched on in its settings). Without discovery you can go back to the bridge network with an
 # override file that sets `network_mode: bridge` and the edge's `ports:` again (and `extra_hosts: !reset []` on the
-# updater); set EDGE_DISCOVERY=false then.
+# updater); set EDGE_DISCOVERY=false and EDGE_NETWORK_DISCOVERY=false then (network discovery listens for mDNS, SSDP
+# and Q-SYS QDP on UDP 5353, 1900 and 2467, which need host networking too).
 services:
   edge:
     image: ghcr.io/proav-net/proav-edge:${EDGE_TAG:-latest}
     container_name: proav-edge
     restart: unless-stopped
     network_mode: host
+    # Ping monitors (the dashboard's Devices tab) send ICMP echo, which needs NET_RAW. Docker grants it by default but
+    # Podman and hardened daemons do not, so it is asked for explicitly. It is not root: the edge still runs as the
+    # unprivileged app user. See docs: Edge → Device Monitoring.
+    cap_add:
+      - NET_RAW
     environment:
       EDGE_NAME: ${EDGE_NAME:-}
       EDGE_CLOUD_HOST: ${EDGE_CLOUD_HOST:?set EDGE_CLOUD_HOST (e.g. test.proav.cloud)}
@@ -38,6 +44,9 @@ services:
       EDGE_ADMIN_PASSWORD: ${EDGE_ADMIN_PASSWORD:?set EDGE_ADMIN_PASSWORD for the dashboard}
       # Advertise the edge by mDNS (_proav-edge._tcp) so processors with cloudConfig.host "auto" find it.
       EDGE_DISCOVERY: ${EDGE_DISCOVERY:-true}
+      # Network discovery for the portal's Network tab (mDNS/DNS-SD, SSDP, Q-SYS QDP on this VLAN; sweeps only of the
+      # subnets allowed in the portal). Also needs host networking.
+      EDGE_NETWORK_DISCOVERY: ${EDGE_NETWORK_DISCOVERY:-true}
       # Package cache for deploys (in edge-data): on by default, capped at EDGE_CACHE_MAX_GB.
       EDGE_CACHE: ${EDGE_CACHE:-true}
       EDGE_CACHE_MAX_GB: ${EDGE_CACHE_MAX_GB:-10}
@@ -45,6 +54,11 @@ services:
       EDGE_OUTBOX: ${EDGE_OUTBOX:-true}
       EDGE_OUTBOX_MAX_MB: ${EDGE_OUTBOX_MAX_MB:-256}
       EDGE_OUTBOX_MAX_AGE_HOURS: ${EDGE_OUTBOX_MAX_AGE_HOURS:-72}
+      # MQTT broker for devices on site (Shelly Gen2+), on the host's TCP port 1883 (host networking: no remapping).
+      # Open it on the host firewall for the devices' network only; devices sign in as "devices" with a password the
+      # edge generates and keeps encrypted in edge-data. See docs: Edge → MQTT and Shelly Devices.
+      EDGE_MQTT_ENABLED: ${EDGE_MQTT_ENABLED:-true}
+      EDGE_MQTT_PORT: ${EDGE_MQTT_PORT:-1883}
       # Self-update from the dashboard, through the updater service below.
       EDGE_UPDATES_CHANNEL: ${EDGE_UPDATES_CHANNEL:-next}
       EDGE_UPDATES_VERIFY: ${EDGE_UPDATES_VERIFY:-true}
